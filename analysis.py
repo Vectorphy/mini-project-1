@@ -227,5 +227,25 @@ plt.tight_layout()
 plt.savefig('visualizations/forecast_vs_actual.png')
 plt.close()
 
-print("--- Forecast vs. Actual plot generated ---")
+# --- 9. Period-Specific Forecast vs. Actual Plots ---
+
+def plot_forecast_comparison(period_df, period_name):
+    # The 'forecast' column is in the main 'df'. We can filter it by the dates of the period_df.
+    forecast_period = df[df['Month'].isin(period_df['Month'])]
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(period_df['Month'], period_df['Volume (in Mn)'], label='Actual Volume')
+    plt.plot(forecast_period['Month'], forecast_period['forecast'], 'r--', label='Forecasted Trend')
+    plt.title(f'Actual vs. Forecast ({period_name})')
+    plt.xlabel('Month')
+    plt.ylabel('Volume (in Mn)')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f'visualizations/forecast_vs_actual_{period_name.lower().replace("-", "_")}.png')
+    plt.close()
+
+plot_forecast_comparison(during_covid_df, 'During-COVID')
+plot_forecast_comparison(post_covid_df, 'Post-COVID')
+
+print("--- Period-specific forecast plots generated ---")
 print("\n--- Analysis Complete ---")

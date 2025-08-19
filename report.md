@@ -72,11 +72,19 @@ In the post-COVID period, the trend is much steeper, confirming the accelerated 
 
 ## 6. Forecast vs. Actual Trend Comparison
 
-To visualize the impact of the pandemic on the growth trend, a forecast was generated based on the pre-COVID trend model and compared against the actual transaction volumes.
+To visualize the impact of the pandemic on the growth trend, a forecast was generated based on the pre-COVID trend model and compared against the actual transaction volumes. The overall comparison is shown first, followed by more detailed plots for the "During-COVID" and "Post-COVID" periods.
 
+### Overall Comparison
 ![Forecast vs. Actual Plot](visualizations/forecast_vs_actual.png)
+The plot above clearly illustrates the deviation of the actual transaction volume from the forecasted trend. The red dashed line represents the expected growth trajectory if the pandemic had not occurred. The blue line, representing the actual data, shows a significant and sustained divergence from this forecast.
 
-The plot above clearly illustrates the deviation of the actual transaction volume from the forecasted trend. The red dashed line represents the expected growth trajectory if the pandemic had not occurred. The blue line, representing the actual data, shows a significant and sustained divergence from this forecast, starting from the "During-COVID" period. This provides strong visual evidence that the pandemic acted as a major accelerator for UPI adoption, far exceeding its historical growth path.
+### During-COVID Period
+![During-COVID Forecast Comparison](visualizations/forecast_vs_actual_during_covid.png)
+During the pandemic, the actual transaction volume immediately surpassed the forecasted trend, indicating a rapid adoption of UPI services.
+
+### Post-COVID Period
+![Post-COVID Forecast Comparison](visualizations/forecast_vs_actual_post_covid.png)
+In the post-COVID era, the gap between the actual volume and the forecasted trend continued to widen, confirming that the accelerated growth was not temporary and has been sustained.
 
 ## 7. Final Conclusion
 
