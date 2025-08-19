@@ -153,4 +153,22 @@ if p_val_resid < 0.05:
 else:
     print("  - Conclusion: The growth trend did not significantly change post-pandemic.")
 
+# --- 6. Forecast vs. Actual Trend Comparison Plot ---
+
+# Generate predictions for the entire timeline based on the pre-COVID model
+df['forecast'] = model_pre.predict(sm.add_constant(df['time_index']))
+
+plt.figure(figsize=(14, 7))
+plt.plot(df['Month'], df['Volume (in Mn)'], label='Actual Volume')
+plt.plot(df['Month'], df['forecast'], 'r--', label='Forecasted Trend (from Pre-COVID)')
+plt.axvspan(during_covid_start, during_covid_end, color='red', alpha=0.15, label='During-COVID')
+plt.title('Actual UPI Volume vs. Forecasted Trend')
+plt.xlabel('Month')
+plt.ylabel('Volume (in Mn)')
+plt.legend()
+plt.tight_layout()
+plt.savefig('visualizations/forecast_vs_actual.png')
+plt.close()
+
+print("--- Forecast vs. Actual plot generated ---")
 print("\n--- Analysis Complete ---")
