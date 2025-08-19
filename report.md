@@ -52,7 +52,25 @@ Three key hypotheses were tested to statistically validate the observed trends.
     - **T-statistic on residuals:** 9.8686, **P-value:** 0.0000
 - **Conclusion:** The p-value is less than 0.05, leading us to **reject the null hypothesis**. The actual transaction volumes in the post-pandemic period are significantly higher than what would have been predicted by the pre-pandemic trend, indicating an acceleration in growth.
 
-## 5. Forecast vs. Actual Trend Comparison
+## 5. Time Series Decomposition
+
+To better understand the underlying patterns in the UPI transaction data, a time series decomposition was performed. This separates the data into its trend, seasonal, and residual components.
+
+### Overall Decomposition
+![Overall Decomposition](visualizations/decomposition_overall.png)
+The overall decomposition clearly shows a strong upward trend and a recurring seasonal pattern.
+
+### Pre-COVID Decomposition
+![Pre-COVID Decomposition](visualizations/decomposition_pre-covid.png)
+In the pre-COVID era, the trend was still positive but less steep. The seasonal component is present but less pronounced.
+
+### Post-COVID Decomposition
+![Post-COVID Decomposition](visualizations/decomposition_post-covid.png)
+In the post-COVID period, the trend is much steeper, confirming the accelerated growth. The seasonal pattern is also more defined.
+
+*(Note: The "During-COVID" period was too short for a meaningful seasonal decomposition and was therefore skipped.)*
+
+## 6. Forecast vs. Actual Trend Comparison
 
 To visualize the impact of the pandemic on the growth trend, a forecast was generated based on the pre-COVID trend model and compared against the actual transaction volumes.
 
@@ -60,7 +78,7 @@ To visualize the impact of the pandemic on the growth trend, a forecast was gene
 
 The plot above clearly illustrates the deviation of the actual transaction volume from the forecasted trend. The red dashed line represents the expected growth trajectory if the pandemic had not occurred. The blue line, representing the actual data, shows a significant and sustained divergence from this forecast, starting from the "During-COVID" period. This provides strong visual evidence that the pandemic acted as a major accelerator for UPI adoption, far exceeding its historical growth path.
 
-## 6. Final Conclusion
+## 7. Final Conclusion
 
 The analysis provides strong evidence that the COVID-19 pandemic had a significant and lasting impact on UPI transaction growth. All three hypotheses, supported by the visual evidence from the forecast comparison, confirmed that the post-pandemic period is characterized by:
 - Significantly higher average transaction volumes and values.

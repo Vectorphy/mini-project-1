@@ -153,11 +153,68 @@ if p_val_resid < 0.05:
 else:
     print("  - Conclusion: The growth trend did not significantly change post-pandemic.")
 
-# --- 6. Forecast vs. Actual Trend Comparison Plot ---
+from statsmodels.tsa.seasonal import seasonal_decompose
 
-# Generate predictions for the entire timeline based on the pre-COVID model
+# --- 6. Improved Time Series Plotting ---
+
+# Re-defining the plotting function for clarity
+def plot_period_timeseries_clear(df, period_name):
+    fig, ax1 = plt.subplots(figsize=(10, 5))
+
+    p1, = ax1.plot(df['Month'], df['Volume (in Mn)'], 'g-', label='Volume (in Mn)')
+    ax1.set_xlabel('Month')
+    ax1.set_ylabel('Volume (in Mn)', color='g')
+    ax1.tick_params('y', colors='g')
+
+    ax2 = ax1.twinx()
+    p2, = ax2.plot(df['Month'], df['Value (in Cr.)'], 'b-', label='Value (in Cr.)')
+    ax2.set_ylabel('Value (in Cr.)', color='b')
+    ax2.tick_params('y', colors='b')
+
+    plt.title(f'UPI Transactions ({period_name})')
+    plt.legend(handles=[p1, p2])
+    fig.tight_layout()
+    plt.savefig(f'visualizations/time_series_{period_name.lower()}_clear.png')
+    plt.close()
+
+# Overwrite previous plots with clearer versions
+plot_period_timeseries_clear(pre_covid_df, 'Pre-COVID')
+plot_period_timeseries_clear(during_covid_df, 'During-COVID')
+plot_period_timeseries_clear(post_covid_df, 'Post-COVID')
+
+print("--- Improved Time Series Plots Generated ---")
+
+
+# --- 7. Time Series Decomposition ---
+
+def decompose_time_series(df, period_name, model='additive'):
+    # Decomposition needs the dataframe index to be the time series
+    df_decomp = df.set_index('Month')
+
+    # Ensure there are enough data points for decomposition
+    if len(df_decomp) < 24: # Need at least 2 full periods
+        print(f"Skipping decomposition for {period_name} due to insufficient data.")
+        return
+
+    result = seasonal_decompose(df_decomp['Volume (in Mn)'], model=model, period=12)
+
+    fig = result.plot()
+    fig.set_size_inches(14, 10)
+    plt.suptitle(f'Decomposition of UPI Volume ({period_name})', y=1.02)
+    plt.tight_layout()
+    plt.savefig(f'visualizations/decomposition_{period_name.lower()}.png')
+    plt.close()
+
+decompose_time_series(df, 'Overall')
+decompose_time_series(pre_covid_df, 'Pre-COVID')
+decompose_time_series(during_covid_df, 'During-COVID')
+decompose_time_series(post_covid_df, 'Post-COVID')
+
+print("--- Time Series Decomposition Complete ---")
+
+
+# --- 8. Forecast vs. Actual Trend Comparison Plot (Re-run for completeness) ---
 df['forecast'] = model_pre.predict(sm.add_constant(df['time_index']))
-
 plt.figure(figsize=(14, 7))
 plt.plot(df['Month'], df['Volume (in Mn)'], label='Actual Volume')
 plt.plot(df['Month'], df['forecast'], 'r--', label='Forecasted Trend (from Pre-COVID)')
