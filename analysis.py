@@ -57,11 +57,50 @@ from statsmodels.tsa.api import ExponentialSmoothing
 from statsmodels.tsa.arima.model import ARIMA
 from scipy.stats import ttest_1samp
 
-# --- 4. Implement Hybrid Forecasting Analysis ---
+# --- 4. Time Series Plotting ---
 
 # Create a directory for visualizations
 if not os.path.exists('visualizations'):
     os.makedirs('visualizations')
+
+# Plot for the entire dataset
+fig, ax1 = plt.subplots(figsize=(14, 7))
+ax1.plot(df['Month'], df['Volume (in Mn)'], 'g-', label='Volume (in Mn)')
+ax1.set_xlabel('Month')
+ax1.set_ylabel('Volume (in Mn)', color='g')
+ax1.tick_params('y', colors='g')
+ax2 = ax1.twinx()
+ax2.plot(df['Month'], df['Value (in Cr.)'], 'b-', label='Value (in Cr.)')
+ax2.set_ylabel('Value (in Cr.)', color='b')
+ax2.tick_params('y', colors='b')
+plt.title('UPI Transaction Volume and Value Over Time')
+plt.axvspan(during_covid_start, during_covid_end, color='red', alpha=0.15, label='During-COVID')
+plt.legend(handles=[ax1.get_lines()[0], ax2.get_lines()[0]])
+fig.tight_layout()
+plt.savefig('visualizations/time_series_full.png')
+plt.close()
+
+# Separate plots for each period
+for period_df, period_name in [(pre_covid_df, 'Pre-COVID'), (during_covid_df, 'During-COVID'), (post_covid_df, 'Post-COVID')]:
+    fig, ax1 = plt.subplots(figsize=(10, 5))
+    p1, = ax1.plot(period_df['Month'], period_df['Volume (in Mn)'], 'g-', label='Volume (in Mn)')
+    ax1.set_xlabel('Month')
+    ax1.set_ylabel('Volume (in Mn)', color='g')
+    ax1.tick_params('y', colors='g')
+    ax2 = ax1.twinx()
+    p2, = ax2.plot(period_df['Month'], period_df['Value (in Cr.)'], 'b-', label='Value (in Cr.)')
+    ax2.set_ylabel('Value (in Cr.)', color='b')
+    ax2.tick_params('y', colors='b')
+    plt.title(f'UPI Transactions ({period_name})')
+    plt.legend(handles=[p1, p2])
+    fig.tight_layout()
+    plt.savefig(f'visualizations/time_series_{period_name.lower()}.png')
+    plt.close()
+
+print("\n--- Time Series Plots Generated ---")
+
+
+# --- 5. Implement Hybrid Forecasting Analysis ---
 
 # --- Part 1: Holt-Winters for Pre-COVID vs. During-COVID ---
 
@@ -102,15 +141,15 @@ run_holtwinters_analysis(pre_covid_df, during_covid_df, "Pre-COVID vs During-COV
 
 # --- Part 2: ARIMA for (Pre+During)-COVID vs. Post-COVID ---
 
-def run_arima_analysis(train_df, test_df, period_name):
+def run_arima_analysis(train_df, test_df, period_name, arima_order):
     print(f"\n--- Running ARIMA Analysis for {period_name} ---")
 
     # Prepare data
     train_vol = train_df.set_index('Month')['Volume (in Mn)']
     test_vol = test_df.set_index('Month')['Volume (in Mn)']
 
-    # Fit ARIMA(1,2,1) model
-    model = ARIMA(train_vol, order=(1, 2, 1))
+    # Fit ARIMA model
+    model = ARIMA(train_vol, order=arima_order)
     fitted_model = model.fit()
 
     # Forecast
@@ -140,7 +179,7 @@ full_range = pd.date_range(start=pre_and_during_df['Month'].min(), end=pre_and_d
 pre_and_during_df = pre_and_during_df.set_index('Month').reindex(full_range).reset_index().rename(columns={'index': 'Month'})
 pre_and_during_df['Volume (in Mn)'] = pre_and_during_df['Volume (in Mn)'].interpolate(method='linear')
 
-run_arima_analysis(pre_and_during_df, post_covid_df, "(Pre+During)-COVID vs Post-COVID")
+run_arima_analysis(pre_and_during_df, post_covid_df, "(Pre+During)-COVID vs Post-COVID", arima_order=(2, 2, 2))
 
 from statsmodels.formula.api import ols
 from scipy.stats import levene
@@ -149,11 +188,13 @@ from scipy.stats import levene
 
 print("\n--- Additional Hypothesis Tests ---")
 
+from scipy.stats import ttest_ind
+
 # Test for difference in average transactions
 print("\n--- Test for Difference in Average Transactions ---")
 post_onset_df = pd.concat([during_covid_df, post_covid_df])
 for col in ['Volume (in Mn)', 'Value (in Cr.)']:
-    t_stat, p_val = ttest_1samp(post_onset_df[col] - pre_covid_df[col].mean(), 0)
+    t_stat, p_val = ttest_ind(pre_covid_df[col], post_onset_df[col], equal_var=False)
     print(f"\n- {col}: T-statistic: {t_stat:.4f}, P-value: {p_val:.4f}")
 
 # Chow test for structural break
