@@ -78,3 +78,45 @@ This comprehensive analysis provides several key insights into the impact of the
 1.  **Massive, Sustained Acceleration:** The pandemic triggered a massive, statistically significant acceleration in UPI growth that exceeded the forecasts of both a pre-COVID Holt-Winters model and a (Pre+During)-COVID ARIMA model. The growth did not level off but continued to accelerate.
 2.  **Fundamental Shift:** The structural break identified by the Chow test and the significant difference in average transactions confirm that the pandemic fundamentally altered UPI usage patterns.
 3.  **Increased Volatility:** The significant result of the Levene test shows that the growth has also become more volatile since the pandemic's onset.
+---
+
+##  Exploratory Data Analysis (EDA)
+
+A comprehensive Exploratory Data Analysis was conducted to uncover patterns, identify anomalies, and understand the key drivers in the UPI transaction data.
+
+### 1. Descriptive Statistics & Distribution Analysis
+The analysis began by segmenting the data into **Pre-COVID**, **During-COVID**, and **Post-COVID** periods. The descriptive statistics revealed an exponential increase in both transaction volume and value. For instance, the average monthly transaction value surged from approximately **₹0.65 trillion** pre-COVID to **₹18.25 trillion** post-COVID. Box plots visually confirmed this dramatic upward shift in the data's distribution, with both the median and interquartile range expanding significantly over time.
+
+- **Key Insight:** The growth in UPI transactions has been explosive and accelerated significantly during and after the COVID-19 pandemic.
+
+![Volume Distribution by Period](visualizations/volume_boxplot_by_period.png)
+![Value Distribution by Period](visualizations/value_boxplot_by_period.png)
+
+### 2. Trend and Growth Rate Analysis
+The overall time series shows a strong, persistent upward trend. A 6-month moving average was used to smooth out short-term fluctuations, clearly illustrating the steep trajectory of UPI adoption. The month-over-month growth rate was highly volatile in the early stages but has started to show signs of stabilization in the post-COVID era as the platform matures.
+
+- **Key Insight:** While the overall trend is one of strong growth, the rate of that growth is becoming more consistent.
+
+![Value Growth Rate](visualizations/value_growth_rate.png)
+![Value with Rolling Average](visualizations/value_rolling_average.png)
+
+### 3. Correlation and Feature Analysis
+A correlation matrix was generated to understand the relationships between key variables. A near-perfect positive correlation (+0.99) was found between `Volume (in Bn)` and `Value (in Trn)`. Furthermore, the `No. of Banks live on UPI` showed a very strong positive correlation with both volume and value.
+
+- **Key Insight:** The expansion of the UPI network by adding more banks has been a critical driver of its overall growth.
+
+![Correlation Heatmap](visualizations/correlation_heatmap.png)
+
+### 4. Time Series Decomposition
+To better understand the underlying structure of the data, a seasonal decomposition was performed. This analysis separated the time series into three components:
+
+* **Trend:** Confirmed the strong, accelerating upward trend.
+* **Seasonality:** Revealed a consistent seasonal pattern, with transaction activity often peaking at certain times of the year.
+* **Residuals:** Isolated the random, irregular noise in the data.
+
+- **Key Insight:** The data exhibits clear trend and seasonal patterns, which must be addressed in our time series modeling to ensure accurate forecasts.
+
+![Value Decomposition](visualizations/value_decomposition.png)
+![Volume Decomposition](visualizations/volume_decomposition.png)
+
+---
