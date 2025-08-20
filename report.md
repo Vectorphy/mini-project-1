@@ -1,12 +1,12 @@
-# Analysis of UPI Transaction Growth using ARIMA(2,2,2) Model
+# Analysis of UPI Transaction Growth using a Hybrid Forecasting Approach
 
 ## 1. Introduction
 
-This report details a comprehensive analysis of UPI transaction data to understand the impact of the COVID-19 pandemic on its growth. This version of the analysis uses an ARIMA(2,2,2) model for all forecasting, structured into two distinct comparisons as requested:
-1.  **Pre-COVID vs. During-COVID**: An ARIMA model is trained on pre-COVID data to forecast the during-COVID period.
-2.  **(Pre+During)-COVID vs. Post-COVID**: A second ARIMA model is trained on the combined pre-COVID and during-COVID data to forecast the post-COVID period.
+This report details a comprehensive analysis of UPI transaction data to understand the impact of the COVID-19 pandemic on its growth. This final version of the analysis uses a hybrid forecasting approach as requested:
+1.  **Holt-Winters Model**: Used to analyze the `Pre-COVID vs. During-COVID` periods.
+2.  **ARIMA(2,2,2) Model**: Used to analyze the `(Pre+During)-COVID vs. Post-COVID` periods.
 
-This approach allows us to assess the impact of the pandemic and the subsequent growth trajectory using a consistent modeling technique.
+This approach allows for a nuanced view of the pandemic's impact. Additionally, several hypothesis tests, including a new test for changes in volatility, are conducted to provide statistical backing for the findings.
 
 ## 2. Data Cleaning and Preparation
 
@@ -16,26 +16,41 @@ The raw data was cleaned and prepared for analysis. This involved converting dat
 - **Post-COVID**: Data from August 2022 onwards.
 The cleaned data was exported to `upi_data_cleaned.xlsx`.
 
-## 3. Exploratory Time Series Plots
+## 3. Exploratory Data Analysis (EDA)
 
+### Data Distributions
+Histograms and box plots were generated for each period to visualize the distribution of transaction volumes.
+
+**Pre-COVID:**
+![Pre-COVID EDA](visualizations/eda_distributions_pre-covid.png)
+
+**During-COVID:**
+![During-COVID EDA](visualizations/eda_distributions_during-covid.png)
+
+**Post-COVID:**
+![Post-COVID EDA](visualizations/eda_distributions_post-covid.png)
+
+These plots show a clear shift in the distribution to higher values in each subsequent period.
+
+### Time Series Trends
 To visualize the overall trend, a time series plot of the entire dataset was created.
 
 ![Full Time Series Plot](visualizations/time_series_full.png)
 
 The plot clearly shows an exponential growth trend in both transaction volume and value over time, with a noticeable acceleration around the "During-COVID" period (marked in red).
 
-## 4. ARIMA(2,2,2) Forecasting Analysis
+## 4. Hybrid Forecasting Analysis
 
-### Part 1: Pre-COVID vs. During-COVID Analysis
+### Part 1: Pre-COVID vs. During-COVID (Holt-Winters)
 
-An ARIMA(2,2,2) model was trained on the Pre-COVID data and used to forecast the transaction volumes for the During-COVID period.
+A Holt-Winters model, suitable for handling data with trend and seasonality, was trained on the Pre-COVID data to forecast the During-COVID period.
 
-![ARIMA Forecast for During-COVID](visualizations/arima_forecast_pre-covid_vs_during-covid.png)
+![Holt-Winters Forecast for During-COVID](visualizations/hw_forecast_pre-covid_vs_during-covid.png)
 
-- **Statistical Test on Residuals:** A t-test on the forecast residuals yielded a **T-statistic of 6.7052** and a **p-value of 0.0000**.
-- **Conclusion:** The actual transaction volumes during the pandemic were **statistically significantly higher** than what the ARIMA model predicted based on the pre-COVID trend. This confirms a major shift in user behavior at the onset of the pandemic.
+- **Statistical Test on Residuals:** A t-test on the forecast residuals yielded a **T-statistic of 5.4782** and a **p-value of 0.0000**.
+- **Conclusion:** The actual transaction volumes during the pandemic were **statistically significantly different** from what the Holt-Winters model predicted based on the pre-COVID trend. This confirms a major shift in user behavior at the onset of the pandemic.
 
-### Part 2: (Pre+During)-COVID vs. Post-COVID Analysis
+### Part 2: (Pre+During)-COVID vs. Post-COVID (ARIMA)
 
 A new ARIMA(2,2,2) model was trained on the combined Pre-COVID and During-COVID data. This model, representing the "new normal" trend established during the pandemic, was then used to forecast the Post-COVID period.
 
@@ -59,7 +74,7 @@ A Levene test was conducted to compare the variance of the monthly growth rates 
 
 ## 6. Final Conclusion
 
-This comprehensive analysis, using a consistent ARIMA(2,2,2) model, provides several key insights:
-1.  **Massive, Sustained Acceleration:** The pandemic triggered a massive, statistically significant acceleration in UPI growth that exceeded the forecasts of both a pre-COVID trend and a (Pre+During)-COVID trend. The growth did not level off but continued to accelerate.
+This comprehensive analysis provides several key insights into the impact of the COVID-19 pandemic on UPI transactions:
+1.  **Massive, Sustained Acceleration:** The pandemic triggered a massive, statistically significant acceleration in UPI growth that exceeded the forecasts of both a pre-COVID Holt-Winters model and a (Pre+During)-COVID ARIMA model. The growth did not level off but continued to accelerate.
 2.  **Fundamental Shift:** The structural break identified by the Chow test and the significant difference in average transactions confirm that the pandemic fundamentally altered UPI usage patterns.
 3.  **Increased Volatility:** The significant result of the Levene test shows that the growth has also become more volatile since the pandemic's onset.
