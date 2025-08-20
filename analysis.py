@@ -106,146 +106,132 @@ plt.close()
 print("--- Time Series Plots Generated ---")
 
 
-# --- 5. Hypothesis Testing ---
+from statsmodels.tsa.api import ExponentialSmoothing
+
+# --- 5. Holt-Winters Model Implementation ---
+
+# Prepare data for Holt-Winters
+train = pre_covid_df.set_index('Month')['Volume (in Mn)']
+# Add a small constant to handle zero values, as multiplicative models can't handle them
+train = train.replace(0, 0.01)
+
+# Fit Holt-Winters model
+# Using multiplicative trend and seasonality due to the exponential nature of the growth
+hw_model = ExponentialSmoothing(
+    train,
+    trend='mul',
+    seasonal='mul',
+    seasonal_periods=12
+).fit()
+
+# Forecast for the entire period after pre-COVID
+forecast_steps = len(df) - len(pre_covid_df)
+hw_forecast = hw_model.forecast(steps=forecast_steps)
+
+# Add forecast to the main dataframe
+forecast_index = pd.date_range(start=pre_covid_df['Month'].iloc[-1] + pd.DateOffset(months=1), periods=forecast_steps, freq='MS')
+df.loc[len(pre_covid_df):, 'hw_forecast'] = hw_forecast.values
+
+print("--- Holt-Winters Model Implemented and Forecast Generated ---")
+
+
+# --- 6. Hypothesis Testing (Revisited with HW Forecast) ---
 
 print("\n--- Hypothesis Testing Results ---")
 
-# Hypothesis 3: Average Transactions
+# Hypothesis 3 (Average Transactions) - Unchanged by forecasting model
 print("\n--- H3: Difference in Average Transactions ---")
 post_onset_df = pd.concat([during_covid_df, post_covid_df])
 for col in ['Volume (in Mn)', 'Value (in Cr.)']:
     t_stat, p_val = ttest_ind(pre_covid_df[col], post_onset_df[col], equal_var=False)
-    print(f"\n- {col}:")
-    print(f"  - T-statistic: {t_stat:.4f}, P-value: {p_val:.4f}")
+    print(f"\n- {col}: T-statistic: {t_stat:.4f}, P-value: {p_val:.4f}")
     if p_val < 0.05:
         print("  - Conclusion: The difference in average transactions is statistically significant.")
     else:
         print("  - Conclusion: The difference is not statistically significant.")
 
-# Hypothesis 2: Structural Change (Chow Test)
+# Hypothesis 2 (Structural Change) - Unchanged by forecasting model
 print("\n--- H2: Structural Break (Chow Test) ---")
 df['time_index'] = range(len(df))
 df['dummy'] = (df['Month'] > pre_covid_end).astype(int)
 df['time_dummy'] = df['time_index'] * df['dummy']
 model = ols('Q("Volume (in Mn)") ~ time_index + dummy + time_dummy', data=df).fit()
 f_test_result = model.f_test('dummy = 0, time_dummy = 0')
-print("\n- Chow-like test for Volume (in Mn):")
-print(f"  - F-statistic: {f_test_result.fvalue:.4f}, P-value: {f_test_result.pvalue:.4f}")
+print(f"\n- Chow-like test for Volume (in Mn): F-statistic: {f_test_result.fvalue:.4f}, P-value: {f_test_result.pvalue:.4f}")
 if f_test_result.pvalue < 0.05:
     print("  - Conclusion: There is a statistically significant structural break.")
 else:
     print("  - Conclusion: There is no statistically significant structural break.")
 
-# Hypothesis 1: Trend Change
-print("\n--- H1: Change in Growth Trend ---")
-X_pre = sm.add_constant(range(len(pre_covid_df)))
-model_pre = sm.OLS(pre_covid_df['Volume (in Mn)'], X_pre).fit()
-X_post_onset = sm.add_constant(range(len(pre_covid_df), len(df)))
-predicted_post_onset = pd.Series(model_pre.predict(X_post_onset), index=range(len(pre_covid_df), len(df)))
-actual_post_onset = post_onset_df.set_index(pd.Index(range(len(pre_covid_df), len(pre_covid_df) + len(post_onset_df))))['Volume (in Mn)']
-actual_aligned = actual_post_onset.reindex(predicted_post_onset.index)
-residuals = (actual_aligned - predicted_post_onset).dropna()
-t_stat_resid, p_val_resid = ttest_1samp(residuals, 0)
-print("\n- Testing for trend change in Volume (in Mn):")
-print(f"  - T-statistic on residuals: {t_stat_resid:.4f}, P-value: {p_val_resid:.4f}")
-if p_val_resid < 0.05:
+# Hypothesis 1 (Trend Change) - Revisited with Holt-Winters
+print("\n--- H1: Change in Growth Trend (Holt-Winters) ---")
+actuals = df.loc[len(pre_covid_df):]['Volume (in Mn)']
+forecasts = df.loc[len(pre_covid_df):]['hw_forecast']
+residuals_hw = actuals - forecasts
+residuals_hw = residuals_hw.dropna()
+
+t_stat_resid_hw, p_val_resid_hw = ttest_1samp(residuals_hw, 0)
+print(f"\n- Testing for trend change in Volume (in Mn): T-statistic on residuals: {t_stat_resid_hw:.4f}, P-value: {p_val_resid_hw:.4f}")
+if p_val_resid_hw < 0.05:
     print("  - Conclusion: The growth trend significantly accelerated post-pandemic.")
 else:
     print("  - Conclusion: The growth trend did not significantly change post-pandemic.")
 
-from statsmodels.tsa.seasonal import seasonal_decompose
+# --- 7. Generate New Plots based on Holt-Winters ---
 
-# --- 6. Improved Time Series Plotting ---
+# Create a directory for visualizations
+if not os.path.exists('visualizations'):
+    os.makedirs('visualizations')
 
-# Re-defining the plotting function for clarity
-def plot_period_timeseries_clear(df, period_name):
-    fig, ax1 = plt.subplots(figsize=(10, 5))
+# Plot Holt-Winters Components
+plt.figure(figsize=(14, 10))
+plt.subplot(411)
+plt.plot(hw_model.level, label='Level')
+plt.legend()
+plt.subplot(412)
+plt.plot(hw_model.trend, label='Trend')
+plt.legend()
+plt.subplot(413)
+plt.plot(hw_model.season, label='Seasonality')
+plt.legend()
+plt.subplot(414)
+plt.plot(hw_model.resid, label='Residuals')
+plt.legend()
+plt.suptitle('Holt-Winters Components')
+plt.tight_layout()
+plt.savefig('visualizations/hw_components.png')
+plt.close()
 
-    p1, = ax1.plot(df['Month'], df['Volume (in Mn)'], 'g-', label='Volume (in Mn)')
-    ax1.set_xlabel('Month')
-    ax1.set_ylabel('Volume (in Mn)', color='g')
-    ax1.tick_params('y', colors='g')
-
-    ax2 = ax1.twinx()
-    p2, = ax2.plot(df['Month'], df['Value (in Cr.)'], 'b-', label='Value (in Cr.)')
-    ax2.set_ylabel('Value (in Cr.)', color='b')
-    ax2.tick_params('y', colors='b')
-
-    plt.title(f'UPI Transactions ({period_name})')
-    plt.legend(handles=[p1, p2])
-    fig.tight_layout()
-    plt.savefig(f'visualizations/time_series_{period_name.lower()}_clear.png')
-    plt.close()
-
-# Overwrite previous plots with clearer versions
-plot_period_timeseries_clear(pre_covid_df, 'Pre-COVID')
-plot_period_timeseries_clear(during_covid_df, 'During-COVID')
-plot_period_timeseries_clear(post_covid_df, 'Post-COVID')
-
-print("--- Improved Time Series Plots Generated ---")
-
-
-# --- 7. Time Series Decomposition ---
-
-def decompose_time_series(df, period_name, model='additive'):
-    # Decomposition needs the dataframe index to be the time series
-    df_decomp = df.set_index('Month')
-
-    # Ensure there are enough data points for decomposition
-    if len(df_decomp) < 24: # Need at least 2 full periods
-        print(f"Skipping decomposition for {period_name} due to insufficient data.")
-        return
-
-    result = seasonal_decompose(df_decomp['Volume (in Mn)'], model=model, period=12)
-
-    fig = result.plot()
-    fig.set_size_inches(14, 10)
-    plt.suptitle(f'Decomposition of UPI Volume ({period_name})', y=1.02)
-    plt.tight_layout()
-    plt.savefig(f'visualizations/decomposition_{period_name.lower()}.png')
-    plt.close()
-
-decompose_time_series(df, 'Overall')
-decompose_time_series(pre_covid_df, 'Pre-COVID')
-decompose_time_series(during_covid_df, 'During-COVID')
-decompose_time_series(post_covid_df, 'Post-COVID')
-
-print("--- Time Series Decomposition Complete ---")
-
-
-# --- 8. Forecast vs. Actual Trend Comparison Plot (Re-run for completeness) ---
-df['forecast'] = model_pre.predict(sm.add_constant(df['time_index']))
+# Plot Forecast vs. Actual
 plt.figure(figsize=(14, 7))
 plt.plot(df['Month'], df['Volume (in Mn)'], label='Actual Volume')
-plt.plot(df['Month'], df['forecast'], 'r--', label='Forecasted Trend (from Pre-COVID)')
-plt.axvspan(during_covid_start, during_covid_end, color='red', alpha=0.15, label='During-COVID')
-plt.title('Actual UPI Volume vs. Forecasted Trend')
+plt.plot(df['Month'], df['hw_forecast'], 'r--', label='Holt-Winters Forecast')
+plt.title('Actual UPI Volume vs. Holt-Winters Forecast')
 plt.xlabel('Month')
 plt.ylabel('Volume (in Mn)')
 plt.legend()
 plt.tight_layout()
-plt.savefig('visualizations/forecast_vs_actual.png')
+plt.savefig('visualizations/hw_forecast_vs_actual.png')
 plt.close()
 
-# --- 9. Period-Specific Forecast vs. Actual Plots ---
-
-def plot_forecast_comparison(period_df, period_name):
-    # The 'forecast' column is in the main 'df'. We can filter it by the dates of the period_df.
+# Period-Specific Plots
+def plot_hw_forecast_comparison(period_df, period_name):
     forecast_period = df[df['Month'].isin(period_df['Month'])]
 
     plt.figure(figsize=(10, 6))
     plt.plot(period_df['Month'], period_df['Volume (in Mn)'], label='Actual Volume')
-    plt.plot(forecast_period['Month'], forecast_period['forecast'], 'r--', label='Forecasted Trend')
-    plt.title(f'Actual vs. Forecast ({period_name})')
+    plt.plot(forecast_period['Month'], forecast_period['hw_forecast'], 'r--', label='Holt-Winters Forecast')
+    plt.title(f'Actual vs. Holt-Winters Forecast ({period_name})')
     plt.xlabel('Month')
     plt.ylabel('Volume (in Mn)')
     plt.legend()
     plt.tight_layout()
-    plt.savefig(f'visualizations/forecast_vs_actual_{period_name.lower().replace("-", "_")}.png')
+    plt.savefig(f'visualizations/hw_forecast_vs_actual_{period_name.lower().replace("-", "_")}.png')
     plt.close()
 
-plot_forecast_comparison(during_covid_df, 'During-COVID')
-plot_forecast_comparison(post_covid_df, 'Post-COVID')
+plot_hw_forecast_comparison(during_covid_df, 'During-COVID')
+plot_hw_forecast_comparison(post_covid_df, 'Post-COVID')
 
-print("--- Period-specific forecast plots generated ---")
+
+print("--- New Plots Generated based on Holt-Winters ---")
 print("\n--- Analysis Complete ---")
