@@ -102,44 +102,7 @@ print("\n--- Time Series Plots Generated ---")
 
 # --- 5. Implement Hybrid Forecasting Analysis ---
 
-# --- Part 1: Holt-Winters for Pre-COVID vs. During-COVID ---
-
-def run_holtwinters_analysis(train_df, test_df, period_name):
-    print(f"\n--- Running Holt-Winters Analysis for {period_name} ---")
-
-    # Prepare data
-    train_vol = train_df.set_index('Month')['Volume (in Mn)'].replace(0, 0.01) # Replace 0s for multiplicative model
-    test_vol = test_df.set_index('Month')['Volume (in Mn)']
-
-    # Fit Holt-Winters model
-    model = ExponentialSmoothing(train_vol, trend='mul', seasonal='mul', seasonal_periods=12).fit()
-
-    # Forecast
-    forecast = model.forecast(steps=len(test_vol))
-    forecast.index = test_vol.index
-
-    # Generate Plot
-    plt.figure(figsize=(10, 6))
-    plt.plot(train_vol.index, train_vol, label='Training Data')
-    plt.plot(test_vol.index, test_vol, label='Actual Volume')
-    plt.plot(forecast.index, forecast, 'r--', label='Holt-Winters Forecast')
-    plt.title(f'Holt-Winters Forecast vs. Actual ({period_name})')
-    plt.xlabel('Month')
-    plt.ylabel('Volume (in Mn)')
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(f'visualizations/hw_forecast_{period_name.lower().replace(" ", "_")}.png')
-    plt.close()
-
-    # Statistical Test on Residuals
-    residuals = test_vol - forecast
-    t_stat, p_val = ttest_1samp(residuals, 0)
-    print(f"\n- Test on Residuals: T-statistic={t_stat:.4f}, P-value={p_val:.4f}")
-
-run_holtwinters_analysis(pre_covid_df, during_covid_df, "Pre-COVID vs During-COVID")
-
-
-# --- Part 2: ARIMA for (Pre+During)-COVID vs. Post-COVID ---
+# --- Part 1: ARIMA for Pre-COVID vs. During-COVID ---
 
 def run_arima_analysis(train_df, test_df, period_name, arima_order):
     print(f"\n--- Running ARIMA Analysis for {period_name} ---")
@@ -172,6 +135,11 @@ def run_arima_analysis(train_df, test_df, period_name, arima_order):
     residuals = test_vol - forecast
     t_stat, p_val = ttest_1samp(residuals, 0)
     print(f"\n- Test on Residuals: T-statistic={t_stat:.4f}, P-value={p_val:.4f}")
+
+run_arima_analysis(pre_covid_df, during_covid_df, "Pre-COVID vs During-COVID", arima_order=(2, 2, 2))
+
+
+# --- Part 2: ARIMA for (Pre+During)-COVID vs. Post-COVID ---
 
 # Prepare combined dataframe for ARIMA training
 pre_and_during_df = pd.concat([pre_covid_df, during_covid_df])
