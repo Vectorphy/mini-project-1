@@ -1,12 +1,12 @@
-# Analysis of UPI Transaction Growth using a Hybrid Forecasting Approach
+# Analysis of UPI Transaction Growth using Holt-Winters Forecasting
 
 ## 1. Introduction
 
-This report details a comprehensive analysis of UPI transaction data to understand the impact of the COVID-19 pandemic on its growth. This final version of the analysis uses a hybrid forecasting approach as requested:
-1.  **Holt-Winters Model**: Used to analyze the `Pre-COVID vs. During-COVID` periods.
-2.  **ARIMA(2,2,2) Model**: Used to analyze the `(Pre+During)-COVID vs. Post-COVID` periods.
+This report details a comprehensive analysis of UPI transaction data to understand the impact of the COVID-19 pandemic on its growth. This analysis uses the **Holt-Winters** forecasting model to analyze transaction trends across different periods.
 
-This approach allows for a nuanced view of the pandemic's impact. Additionally, several hypothesis tests, including a new test for changes in volatility, are conducted to provide statistical backing for the findings.
+Several hypothesis tests, including tests for structural breaks and changes in volatility, are conducted to provide statistical backing for the findings.
+
+For a detailed breakdown of the Python script (`analysis.py`) used for this analysis, please refer to the `code_explanation.md` file.
 
 ## 2. Data Cleaning and Preparation
 
@@ -39,25 +39,25 @@ To visualize the overall trend, a time series plot of the entire dataset was cre
 
 The plot clearly shows an exponential growth trend in both transaction volume and value over time, with a noticeable acceleration around the "During-COVID" period (marked in red).
 
-## 4. Hybrid Forecasting Analysis
+## 4. Forecasting Analysis
 
-### Part 1: Pre-COVID vs. During-COVID (Holt-Winters)
+### Part 1: Pre-COVID vs. During-COVID
 
-A Holt-Winters model, suitable for handling data with trend and seasonality, was trained on the Pre-COVID data to forecast the During-COVID period.
+A Holt-Winters model was trained on the Pre-COVID data to forecast the During-COVID period.
 
 ![Holt-Winters Forecast for During-COVID](visualizations/hw_forecast_pre-covid_vs_during-covid.png)
 
 - **Statistical Test on Residuals:** A t-test on the forecast residuals yielded a **T-statistic of 5.4782** and a **p-value of 0.0000**.
-- **Conclusion:** The actual transaction volumes during the pandemic were **statistically significantly different** from what the Holt-Winters model predicted based on the pre-COVID trend. This confirms a major shift in user behavior at the onset of the pandemic.
+- **Conclusion:** The actual transaction volumes during the pandemic were **statistically significantly different** from what the Holt-Winters model predicted based on the pre-COVID trend. This confirms a major shift in user behavior.
 
-### Part 2: (Pre+During)-COVID vs. Post-COVID (ARIMA)
+### Part 2: (Pre+During)-COVID vs. Post-COVID
 
-A new ARIMA(2,2,2) model was trained on the combined Pre-COVID and During-COVID data. This model, representing the "new normal" trend established during the pandemic, was then used to forecast the Post-COVID period.
+The Holt-Winters model was then trained on the combined Pre-COVID and During-COVID data to forecast the Post-COVID period.
 
-![ARIMA Forecast for Post-COVID](visualizations/arima_forecast_(pre+during)-covid_vs_post-covid.png)
+![Holt-Winters Forecast for Post-COVID](visualizations/hw_forecast_(pre+during)-covid_vs_post-covid.png)
 
-- **Statistical Test on Residuals:** A t-test on the residuals of this second forecast yielded a **T-statistic of 5.6291** and a **p-value of 0.0000**.
-- **Conclusion:** The growth in the post-COVID era **still significantly outpaced the forecast** based on the trend established during the pandemic. This suggests that the accelerated growth has continued to gain momentum. *(Note: A convergence warning was issued during model fitting for this part.)*
+- **Statistical Test on Residuals:** A t-test on the residuals of this second forecast yielded a **T-statistic of -2.6766** and a **p-value of 0.0112**.
+- **Conclusion:** The growth in the post-COVID era **still significantly differed from the forecast** based on the trend established during the pandemic, suggesting that the growth dynamics continued to evolve.
 
 ## 5. Additional Hypothesis Tests
 
@@ -75,48 +75,7 @@ A Levene test was conducted to compare the variance of the monthly growth rates 
 ## 6. Final Conclusion
 
 This comprehensive analysis provides several key insights into the impact of the COVID-19 pandemic on UPI transactions:
-1.  **Massive, Sustained Acceleration:** The pandemic triggered a massive, statistically significant acceleration in UPI growth that exceeded the forecasts of both a pre-COVID Holt-Winters model and a (Pre+During)-COVID ARIMA model. The growth did not level off but continued to accelerate.
+1.  **Massive, Sustained Acceleration:** The pandemic triggered a massive, statistically significant acceleration in UPI growth that exceeded the forecasts of the Holt-Winters model. The growth did not level off but continued to accelerate.
 2.  **Fundamental Shift:** The structural break identified by the Chow test and the significant difference in average transactions confirm that the pandemic fundamentally altered UPI usage patterns.
 3.  **Increased Volatility:** The significant result of the Levene test shows that the growth has also become more volatile since the pandemic's onset.
----
-
-##  Exploratory Data Analysis (EDA)
-
-A comprehensive Exploratory Data Analysis was conducted to uncover patterns, identify anomalies, and understand the key drivers in the UPI transaction data.
-
-### 1. Descriptive Statistics & Distribution Analysis
-The analysis began by segmenting the data into **Pre-COVID**, **During-COVID**, and **Post-COVID** periods. The descriptive statistics revealed an exponential increase in both transaction volume and value. For instance, the average monthly transaction value surged from approximately **₹0.65 trillion** pre-COVID to **₹18.25 trillion** post-COVID. Box plots visually confirmed this dramatic upward shift in the data's distribution, with both the median and interquartile range expanding significantly over time.
-
-- **Key Insight:** The growth in UPI transactions has been explosive and accelerated significantly during and after the COVID-19 pandemic.
-
-![Volume Distribution by Period](visualizations/volume_boxplot_by_period.png)
-![Value Distribution by Period](visualizations/value_boxplot_by_period.png)
-
-### 2. Trend and Growth Rate Analysis
-The overall time series shows a strong, persistent upward trend. A 6-month moving average was used to smooth out short-term fluctuations, clearly illustrating the steep trajectory of UPI adoption. The month-over-month growth rate was highly volatile in the early stages but has started to show signs of stabilization in the post-COVID era as the platform matures.
-
-- **Key Insight:** While the overall trend is one of strong growth, the rate of that growth is becoming more consistent.
-
-![Value Growth Rate](visualizations/value_growth_rate.png)
-![Value with Rolling Average](visualizations/value_rolling_average.png)
-
-### 3. Correlation and Feature Analysis
-A correlation matrix was generated to understand the relationships between key variables. A near-perfect positive correlation (+0.99) was found between `Volume (in Bn)` and `Value (in Trn)`. Furthermore, the `No. of Banks live on UPI` showed a very strong positive correlation with both volume and value.
-
-- **Key Insight:** The expansion of the UPI network by adding more banks has been a critical driver of its overall growth.
-
-![Correlation Heatmap](visualizations/correlation_heatmap.png)
-
-### 4. Time Series Decomposition
-To better understand the underlying structure of the data, a seasonal decomposition was performed. This analysis separated the time series into three components:
-
-* **Trend:** Confirmed the strong, accelerating upward trend.
-* **Seasonality:** Revealed a consistent seasonal pattern, with transaction activity often peaking at certain times of the year.
-* **Residuals:** Isolated the random, irregular noise in the data.
-
-- **Key Insight:** The data exhibits clear trend and seasonal patterns, which must be addressed in our time series modeling to ensure accurate forecasts.
-
-![Value Decomposition](visualizations/value_decomposition.png)
-![Volume Decomposition](visualizations/volume_decomposition.png)
-
 ---
