@@ -3,7 +3,6 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 from statsmodels.tsa.api import ExponentialSmoothing
-from statsmodels.tsa.arima.model import ARIMA
 from scipy.stats import ttest_1samp, ttest_ind, levene
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.formula.api import ols
@@ -241,7 +240,7 @@ for period_df, period_name in [(pre_covid_df, 'Pre-COVID'), (during_covid_df, 'D
 
 print("\n--- Time Series Plots Generated ---")
 
-# --- 5. Final Hybrid Forecasting Analysis ---
+# --- 5. Final Forecasting Analysis ---
 def run_holtwinters_analysis(train_df, test_df, period_name):
     print(f"\n--- Running Holt-Winters Analysis for {period_name} ---")
     train_vol = train_df.set_index('Month')['Volume (in Mn)'].replace(0, 0.01)
@@ -264,28 +263,6 @@ def run_holtwinters_analysis(train_df, test_df, period_name):
     t_stat, p_val = ttest_1samp(residuals, 0)
     print(f"\n- Test on Residuals: T-statistic={t_stat:.4f}, P-value={p_val:.4f}")
 
-def run_arima_analysis(train_df, test_df, period_name, arima_order):
-    print(f"\n--- Running ARIMA Analysis for {period_name} ---")
-    train_vol = train_df.set_index('Month')['Volume (in Mn)']
-    test_vol = test_df.set_index('Month')['Volume (in Mn)']
-    model = ARIMA(train_vol, order=arima_order)
-    fitted_model = model.fit()
-    forecast = fitted_model.predict(start=test_vol.index[0], end=test_vol.index[-1])
-    plt.figure(figsize=(10, 6))
-    plt.plot(train_vol.index, train_vol, label='Training Data')
-    plt.plot(test_vol.index, test_vol, label='Actual Volume')
-    plt.plot(forecast.index, forecast, 'r--', label='ARIMA Forecast')
-    plt.title(f'ARIMA Forecast vs. Actual ({period_name})')
-    plt.xlabel('Month')
-    plt.ylabel('Volume (in Mn)')
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(f'visualizations/arima_forecast_{period_name.lower().replace(" ", "_")}.png')
-    plt.close()
-    residuals = test_vol - forecast
-    t_stat, p_val = ttest_1samp(residuals, 0)
-    print(f"\n- Test on Residuals: T-statistic={t_stat:.4f}, P-value={p_val:.4f}")
-
 # Part 1
 run_holtwinters_analysis(pre_covid_df, during_covid_df, "Pre-COVID vs During-COVID")
 
@@ -294,8 +271,8 @@ pre_and_during_df = pd.concat([pre_covid_df, during_covid_df])
 full_range = pd.date_range(start=pre_and_during_df['Month'].min(), end=pre_and_during_df['Month'].max(), freq='MS')
 pre_and_during_df = pre_and_during_df.set_index('Month').reindex(full_range).reset_index().rename(columns={'index': 'Month'})
 pre_and_during_df['Volume (in Mn)'] = pre_and_during_df['Volume (in Mn)'].interpolate(method='linear')
-run_arima_analysis(pre_and_during_df, post_covid_df, "(Pre+During)-COVID vs Post-COVID", arima_order=(2, 2, 2))
-print("\n--- Hybrid Forecasting Analysis Complete ---")
+run_holtwinters_analysis(pre_and_during_df, post_covid_df, "(Pre+During)-COVID vs Post-COVID")
+print("\n--- Forecasting Analysis Complete ---")
 
 # --- 6. Additional Hypothesis Tests ---
 print("\n--- Additional Hypothesis Tests ---")
