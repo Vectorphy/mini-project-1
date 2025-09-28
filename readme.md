@@ -1,12 +1,12 @@
-# Analysis of UPI Transaction Growth using a Hybrid Forecasting Approach
+# Analysis of UPI Transaction Growth using ARIMA Forecasting
 
 ## 1. Introduction
 
-This report details a comprehensive analysis of UPI transaction data to understand the impact of the COVID-19 pandemic on its growth. This final version of the analysis uses a hybrid forecasting approach as requested:
-1.  **Holt-Winters Model**: Used to analyze the `Pre-COVID vs. During-COVID` periods.
-2.  **ARIMA(2,2,2) Model**: Used to analyze the `(Pre+During)-COVID vs. Post-COVID` periods.
+This report details a comprehensive analysis of UPI transaction data to understand the impact of the COVID-19 pandemic on its growth. This final version of the analysis exclusively uses the **ARIMA(2,2,2) model** for all time series forecasting to ensure a consistent and robust methodology.
 
-This approach allows for a nuanced view of the pandemic's impact. Additionally, several hypothesis tests, including a new test for changes in volatility, are conducted to provide statistical backing for the findings.
+This approach allows for a clear view of the pandemic's impact. Additionally, several hypothesis tests, including a test for changes in volatility, are conducted to provide statistical backing for the findings.
+
+For a detailed technical breakdown of the Python script used for this analysis, please see [`code_explanation.md`](code_explanation.md).
 
 ## 2. Data Cleaning and Preparation
 
@@ -39,16 +39,16 @@ To visualize the overall trend, a time series plot of the entire dataset was cre
 
 The plot clearly shows an exponential growth trend in both transaction volume and value over time, with a noticeable acceleration around the "During-COVID" period (marked in red).
 
-## 4. Hybrid Forecasting Analysis
+## 4. Forecasting Analysis
 
-### Part 1: Pre-COVID vs. During-COVID (Holt-Winters)
+### Part 1: Pre-COVID vs. During-COVID (ARIMA)
 
-A Holt-Winters model, suitable for handling data with trend and seasonality, was trained on the Pre-COVID data to forecast the During-COVID period.
+An ARIMA(2,2,2) model was trained on the Pre-COVID data to forecast the transaction volumes for the During-COVID period.
 
-![Holt-Winters Forecast for During-COVID](visualizations/hw_forecast_pre-covid_vs_during-covid.png)
+![ARIMA Forecast for During-COVID](visualizations/arima_forecast_pre-covid_vs_during-covid.png)
 
-- **Statistical Test on Residuals:** A t-test on the forecast residuals yielded a **T-statistic of 5.4782** and a **p-value of 0.0000**.
-- **Conclusion:** The actual transaction volumes during the pandemic were **statistically significantly different** from what the Holt-Winters model predicted based on the pre-COVID trend. This confirms a major shift in user behavior at the onset of the pandemic.
+- **Statistical Test on Residuals:** A t-test on the forecast residuals yielded a **T-statistic of 6.7052** and a **p-value of 0.0000**.
+- **Conclusion:** The actual transaction volumes during the pandemic were **statistically significantly different** from what the ARIMA model predicted based on the pre-COVID trend. This confirms a major shift in user behavior at the onset of the pandemic.
 
 ### Part 2: (Pre+During)-COVID vs. Post-COVID (ARIMA)
 
@@ -75,7 +75,7 @@ A Levene test was conducted to compare the variance of the monthly growth rates 
 ## 6. Final Conclusion
 
 This comprehensive analysis provides several key insights into the impact of the COVID-19 pandemic on UPI transactions:
-1.  **Massive, Sustained Acceleration:** The pandemic triggered a massive, statistically significant acceleration in UPI growth that exceeded the forecasts of both a pre-COVID Holt-Winters model and a (Pre+During)-COVID ARIMA model. The growth did not level off but continued to accelerate.
+1.  **Massive, Sustained Acceleration:** The pandemic triggered a massive, statistically significant acceleration in UPI growth that exceeded the forecasts of the ARIMA models. The growth did not level off but has continued to gain momentum.
 2.  **Fundamental Shift:** The structural break identified by the Chow test and the significant difference in average transactions confirm that the pandemic fundamentally altered UPI usage patterns.
 3.  **Increased Volatility:** The significant result of the Levene test shows that the growth has also become more volatile since the pandemic's onset.
 ---
