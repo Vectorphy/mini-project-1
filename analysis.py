@@ -2,8 +2,7 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
-from statsmodels.tsa.api import ExponentialSmoothing
-from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 from scipy.stats import ttest_1samp, ttest_ind, levene
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.formula.api import ols
@@ -82,14 +81,14 @@ month_order = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'O
 df['Month_Name'] = pd.Categorical(df['Month_Name'], categories=month_order, ordered=True)
 
 plt.figure(figsize=(12, 8))
-sns.heatmap(df.pivot_table(values='Volume (in Bn)', index='Year', columns='Month_Name', aggfunc='sum'),
+sns.heatmap(df.pivot_table(values='Volume (in Bn)', index='Year', columns='Month_Name', aggfunc='sum', observed=True),
             cmap='viridis', annot=True, fmt=".1f")
 plt.title('Yearly and Monthly Transaction Volume (in Bn)')
 plt.savefig('visualizations/volume_yearly_monthly_heatmap.png')
 plt.close()
 
 plt.figure(figsize=(12, 8))
-sns.heatmap(df.pivot_table(values='Value (in Trn)', index='Year', columns='Month_Name', aggfunc='sum'),
+sns.heatmap(df.pivot_table(values='Value (in Trn)', index='Year', columns='Month_Name', aggfunc='sum', observed=True),
             cmap='viridis', annot=True, fmt=".2f")
 plt.title('Yearly and Monthly Transaction Value (in Trn)')
 plt.savefig('visualizations/value_yearly_monthly_heatmap.png')
@@ -241,61 +240,56 @@ for period_df, period_name in [(pre_covid_df, 'Pre-COVID'), (during_covid_df, 'D
 
 print("\n--- Time Series Plots Generated ---")
 
-# --- 5. Final Hybrid Forecasting Analysis ---
-def run_holtwinters_analysis(train_df, test_df, period_name):
-    print(f"\n--- Running Holt-Winters Analysis for {period_name} ---")
-    train_vol = train_df.set_index('Month')['Volume (in Mn)'].replace(0, 0.01)
-    test_vol = test_df.set_index('Month')['Volume (in Mn)']
-    model = ExponentialSmoothing(train_vol, trend='mul', seasonal='mul', seasonal_periods=12).fit()
-    forecast = model.forecast(steps=len(test_vol))
-    forecast.index = test_vol.index
-    plt.figure(figsize=(10, 6))
-    plt.plot(train_vol.index, train_vol, label='Training Data')
-    plt.plot(test_vol.index, test_vol, label='Actual Volume')
-    plt.plot(forecast.index, forecast, 'r--', label='Holt-Winters Forecast')
-    plt.title(f'Holt-Winters Forecast vs. Actual ({period_name})')
-    plt.xlabel('Month')
-    plt.ylabel('Volume (in Mn)')
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(f'visualizations/hw_forecast_{period_name.lower().replace(" ", "_")}.png')
-    plt.close()
-    residuals = test_vol - forecast
-    t_stat, p_val = ttest_1samp(residuals, 0)
-    print(f"\n- Test on Residuals: T-statistic={t_stat:.4f}, P-value={p_val:.4f}")
-
-def run_arima_analysis(train_df, test_df, period_name, arima_order):
-    print(f"\n--- Running ARIMA Analysis for {period_name} ---")
+# --- 5. Final SARIMA Forecasting Analysis ---
+def run_sarima_analysis(train_df, test_df, period_name, order, seasonal_order):
+    print(f"\n--- Running SARIMA Analysis for {period_name} ---")
     train_vol = train_df.set_index('Month')['Volume (in Mn)']
     test_vol = test_df.set_index('Month')['Volume (in Mn)']
-    model = ARIMA(train_vol, order=arima_order)
-    fitted_model = model.fit()
-    forecast = fitted_model.predict(start=test_vol.index[0], end=test_vol.index[-1])
+
+    model = SARIMAX(train_vol, order=order, seasonal_order=seasonal_order, enforce_stationarity=False, enforce_invertibility=False)
+    fitted_model = model.fit(disp=False)
+
+    # Use get_prediction for more robust forecasting across gaps.
+    forecast = fitted_model.get_prediction(start=test_vol.index[0], end=test_vol.index[-1])
+
+    # The results are already aligned with the test data index.
+    forecast_mean = forecast.predicted_mean
+    forecast_ci = forecast.conf_int()
+
     plt.figure(figsize=(10, 6))
     plt.plot(train_vol.index, train_vol, label='Training Data')
     plt.plot(test_vol.index, test_vol, label='Actual Volume')
-    plt.plot(forecast.index, forecast, 'r--', label='ARIMA Forecast')
-    plt.title(f'ARIMA Forecast vs. Actual ({period_name})')
+    plt.plot(forecast_mean.index, forecast_mean, 'r--', label='SARIMA Forecast')
+    plt.fill_between(forecast_ci.index,
+                     forecast_ci.iloc[:, 0],
+                     forecast_ci.iloc[:, 1], color='pink', alpha=0.5)
+    plt.title(f'SARIMA Forecast vs. Actual ({period_name})')
     plt.xlabel('Month')
     plt.ylabel('Volume (in Mn)')
     plt.legend()
     plt.tight_layout()
-    plt.savefig(f'visualizations/arima_forecast_{period_name.lower().replace(" ", "_")}.png')
+    plt.savefig(f'visualizations/sarima_forecast_{period_name.lower().replace(" ", "_")}.png')
     plt.close()
-    residuals = test_vol - forecast
-    t_stat, p_val = ttest_1samp(residuals, 0)
-    print(f"\n- Test on Residuals: T-statistic={t_stat:.4f}, P-value={p_val:.4f}")
+
+    residuals = test_vol - forecast_mean
+
+    # Check for NaN in residuals before t-test
+    if not residuals.isnull().all():
+        t_stat, p_val = ttest_1samp(residuals.dropna(), 0)
+        print(f"\n- Test on Residuals: T-statistic={t_stat:.4f}, P-value={p_val:.4f}")
+    else:
+        print("\n- Residuals calculation resulted in NaN. Check data alignment.")
 
 # Part 1
-run_holtwinters_analysis(pre_covid_df, during_covid_df, "Pre-COVID vs During-COVID")
+run_sarima_analysis(pre_covid_df, during_covid_df, "Pre-COVID vs During-COVID", order=(1, 1, 1), seasonal_order=(1, 1, 1, 12))
 
 # Part 2
 pre_and_during_df = pd.concat([pre_covid_df, during_covid_df])
 full_range = pd.date_range(start=pre_and_during_df['Month'].min(), end=pre_and_during_df['Month'].max(), freq='MS')
 pre_and_during_df = pre_and_during_df.set_index('Month').reindex(full_range).reset_index().rename(columns={'index': 'Month'})
 pre_and_during_df['Volume (in Mn)'] = pre_and_during_df['Volume (in Mn)'].interpolate(method='linear')
-run_arima_analysis(pre_and_during_df, post_covid_df, "(Pre+During)-COVID vs Post-COVID", arima_order=(2, 2, 2))
-print("\n--- Hybrid Forecasting Analysis Complete ---")
+run_sarima_analysis(pre_and_during_df, post_covid_df, "(Pre+During)-COVID vs Post-COVID", order=(1, 1, 1), seasonal_order=(1, 1, 1, 12))
+print("\n--- SARIMA Forecasting Analysis Complete ---")
 
 # --- 6. Additional Hypothesis Tests ---
 print("\n--- Additional Hypothesis Tests ---")
