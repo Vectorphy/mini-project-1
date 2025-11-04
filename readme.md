@@ -1,124 +1,171 @@
-# Analysis of UPI Transaction Growth using SARIMA Forecasting
+# Analysis of UPI Transaction Growth — Final Report
 
-## 1. Introduction
+Author: Vectorphy
+Date: 2025-11-04
 
-This report details a comprehensive analysis of UPI transaction data to understand the impact of the COVID-19 pandemic on its growth. This analysis uses the **SARIMA (Seasonal AutoRegressive Integrated Moving Average)** model for all time series forecasting to ensure a consistent and robust methodology.
+## Executive summary
 
-The analysis is divided into two main parts:
-1.  **Pre-COVID vs. During-COVID**: A SARIMA model is trained on pre-pandemic data to forecast the trend during the pandemic.
-2.  **(Pre+During)-COVID vs. Post-COVID**: A second SARIMA model is trained on data from both the pre-pandemic and pandemic periods to forecast the trend after the main waves of the pandemic.
+This report examines the effect of the COVID-19 pandemic on UPI transaction volume and value using exploratory data analysis and SARIMA time-series forecasting. Two forecasting exercises were performed:
 
-This approach allows for a nuanced view of the pandemic's impact. Additionally, several hypothesis tests, including a test for changes in volatility, are conducted to provide statistical backing for the findings.
+1. Train on Pre‑COVID data and forecast the During‑COVID period (Pre-COVID → During-COVID).
+2. Train on combined Pre+During data and forecast the Post‑COVID period ((Pre+During) → Post‑COVID).
 
-## 2. Data Cleaning and Preparation
+Key conclusions (summary):
+- The pandemic caused a statistically significant and large change in UPI transaction behavior relative to the pre-pandemic trend.
+- A SARIMA model fit to the Pre+During period over-predicted Post-COVID volumes on average — observed Post‑COVID volumes were significantly lower than that forecast, suggesting the pandemic-era acceleration did not simply continue at the same aggressive rate.
+- Additional hypothesis tests confirm a structural break at the pandemic onset and a significant change in volatility.
 
-The raw data was cleaned and prepared for analysis. This involved converting data types and splitting the data into three periods:
-- **Pre-COVID**: Data up to March 2020.
-- **During-COVID**: Data from April 2020 to January 2022.
-- **Post-COVID**: Data from August 2022 onwards.
-The cleaned data was exported to `upi_data_cleaned.xlsx`.
-
-## 3. Exploratory Data Analysis (EDA)
-
-### Data Distributions
-Histograms and box plots were generated for each period to visualize the distribution of transaction volumes.
-
-**Pre-COVID:**
-![Pre-COVID EDA](visualizations/eda_distributions_pre-covid.png)
-
-**During-COVID:**
-![During-COVID EDA](visualizations/eda_distributions_during-covid.png)
-
-**Post-COVID:**
-![Post-COVID EDA](visualizations/eda_distributions_post-covid.png)
-
-These plots show a clear shift in the distribution to higher values in each subsequent period.
-
-### Time Series Trends
-To visualize the overall trend, a time series plot of the entire dataset was created.
-
-![Full Time Series Plot](visualizations/time_series_full.png)
-
-The plot clearly shows an exponential growth trend in both transaction volume and value over time, with a noticeable acceleration around the "During-COVID" period (marked in red).
-
-## 4. SARIMA Forecasting Analysis
-
-### Part 1: Pre-COVID vs. During-COVID
-
-A SARIMA model, which accounts for trend and seasonality, was trained on the Pre-COVID data to forecast the During-COVID period.
-
-![SARIMA Forecast for During-COVID](visualizations/sarima_forecast_pre-covid_vs_during-covid.png)
-
-- **Statistical Test on Residuals:** A t-test on the forecast residuals yielded a **T-statistic of 5.1217** and a **p-value of 0.0000**.
-- **Conclusion:** The actual transaction volumes during the pandemic were **statistically significantly different** from what the SARIMA model predicted based on the pre-COVID trend. This confirms a major shift in user behavior at the onset of the pandemic.
-
-### Part 2: (Pre+During)-COVID vs. Post-COVID
-
-A second SARIMA model was trained on the combined Pre-COVID and During-COVID data. This model, representing the "new normal" trend established during the pandemic, was then used to forecast the Post-COVID period.
-
-![SARIMA Forecast for Post-COVID](visualizations/sarima_forecast_(pre+during)-covid_vs_post-covid.png)
-
-- **Statistical Test on Residuals:** A t-test on the residuals of this second forecast yielded a **T-statistic of -5.3953** and a **p-value of 0.0000**.
-- **Conclusion:** The growth in the post-COVID era **still significantly differed from the forecast** based on the trend established during the pandemic. The negative t-statistic indicates that the actual values were, on average, lower than the forecast, suggesting that while growth continued, it did not keep pace with the aggressive trajectory projected by the model.
-
-## 5. Additional Hypothesis Tests
-
-### Test for Difference in Average Transactions
-A two-sample t-test confirmed that the average transaction volume and value are **statistically significantly higher** in the post-onset period compared to the pre-COVID period (Volume t-statistic: -11.0504, Value t-statistic: -12.6223, p-value = 0.0000 for both).
-
-### Chow Test for Structural Break
-A Chow test confirmed a **statistically significant structural break** in the data at the onset of the pandemic (p-value = 0.0000), indicating a fundamental shift in the data's properties.
-
-### Levene Test for Change in Volatility
-A Levene test was conducted to compare the variance of the monthly growth rates before and after the pandemic's onset.
-- **Levene Statistic:** 5.1980, **P-value:** 0.0248
-- **Conclusion:** The p-value is less than 0.05, indicating that the **volatility (variance) of the growth rate is statistically significantly different** between the two periods.
-
-## 6. Final Conclusion
-
-This comprehensive analysis provides several key insights into the impact of the COVID-19 pandemic on UPI transactions:
-1.  **Massive Acceleration with Maturation:** The pandemic triggered a massive, statistically significant acceleration in UPI growth that far exceeded the pre-COVID trend. However, the growth in the post-COVID era, while still strong, has begun to show signs of maturation, as it did not keep pace with the aggressive trajectory forecasted based on the pandemic-era trend.
-2.  **Fundamental Shift:** The structural break identified by the Chow test and the significant difference in average transactions confirm that the pandemic fundamentally altered UPI usage patterns.
-3.  **Increased Volatility:** The significant result of the Levene test shows that the growth has also become more volatile since the pandemic's onset.
----
-
-##  Exploratory Data Analysis (EDA)
-
-A comprehensive Exploratory Data Analysis was conducted to uncover patterns, identify anomalies, and understand the key drivers in the UPI transaction data.
-
-### 1. Descriptive Statistics & Distribution Analysis
-The analysis began by segmenting the data into **Pre-COVID**, **During-COVID**, and **Post-COVID** periods. The descriptive statistics revealed an exponential increase in both transaction volume and value. For instance, the average monthly transaction value surged from approximately **₹0.65 trillion** pre-COVID to **₹18.25 trillion** post-COVID. Box plots visually confirmed this dramatic upward shift in the data's distribution, with both the median and interquartile range expanding significantly over time.
-
-- **Key Insight:** The growth in UPI transactions has been explosive and accelerated significantly during and after the COVID-19 pandemic.
-
-![Volume Distribution by Period](visualizations/volume_boxplot_by_period.png)
-![Value Distribution by Period](visualizations/value_boxplot_by_period.png)
-
-### 2. Trend and Growth Rate Analysis
-The overall time series shows a strong, persistent upward trend. A 6-month moving average was used to smooth out short-term fluctuations, clearly illustrating the steep trajectory of UPI adoption. The month-over-month growth rate was highly volatile in the early stages but has started to show signs of stabilization in the post-COVID era as the platform matures.
-
-- **Key Insight:** While the overall trend is one of strong growth, the rate of that growth is becoming more consistent.
-
-![Value Growth Rate](visualizations/value_growth_rate.png)
-![Value with Rolling Average](visualizations/value_rolling_average.png)
-
-### 3. Correlation and Feature Analysis
-A correlation matrix was generated to understand the relationships between key variables. A near-perfect positive correlation (+0.99) was found between `Volume (in Bn)` and `Value (in Trn)`. Furthermore, the `No. of Banks live on UPI` showed a very strong positive correlation with both volume and value.
-
-- **Key Insight:** The expansion of the UPI network by adding more banks has been a critical driver of its overall growth.
-
-![Correlation Heatmap](visualizations/correlation_heatmap.png)
-
-### 4. Time Series Decomposition
-To better understand the underlying structure of the data, a seasonal decomposition was performed. This analysis separated the time series into three components:
-
-* **Trend:** Confirmed the strong, accelerating upward trend.
-* **Seasonality:** Revealed a consistent seasonal pattern, with transaction activity often peaking at certain times of the year.
-* **Residuals:** Isolated the random, irregular noise in the data.
-
-- **Key Insight:** The data exhibits clear trend and seasonal patterns, which must be addressed in our time series modeling to ensure accurate forecasts.
-
-![Value Decomposition](visualizations/value_decomposition.png)
-![Volume Decomposition](visualizations/volume_decomposition.png)
+This document is the cleaned, submission-ready report; figures and data exports are produced by `analysis.py` and saved in the `visualizations/` folder.
 
 ---
+
+## 1. Data and preprocessing
+
+Data source: `Untitled spreadsheet - Sheet1.csv` (project root).
+
+Preprocessing steps (performed in `analysis.py`):
+- Parse `Month` as monthly datetime (format `%b-%y`).
+- Convert numeric columns to float, removing comma separators where present.
+- Create derived columns: `Volume (in Bn)`, `Value (in Trn)`, yearly and month-name columns, and month-over-month growth rates.
+- Split into three periods:
+	- Pre‑COVID: `Month` ≤ 2020-03-31
+	- During‑COVID: 2020-04-01 — 2022-01-31
+	- Post‑COVID: from 2022-08-01 onward
+- Exported cleaned data workbook: `upi_data_cleaned.xlsx` (sheets: Pre-COVID, During-COVID, Post-COVID).
+
+Notes on missing data: the pre+during training set was reindexed to a contiguous monthly index and linearly interpolated for any missing months prior to SARIMA fitting (conservative interpolation only for model training).
+
+---
+
+## 2. Exploratory data analysis (highlights)
+
+- Transaction volume and value show an exponential-like upward trend across the full time span, with a clear acceleration around the start of the pandemic.
+- Yearly × monthly heatmaps show consistent seasonality (peaks aligned to certain months every year).
+- Summary statistics by period indicate large increases in mean and dispersion from Pre → During → Post.
+- Correlation matrix: `Volume (in Bn)` and `Value (in Trn)` are strongly positively correlated. The number of banks live on UPI also correlates positively with volume/value.
+
+Representative visualizations (generated and saved under `visualizations/`):
+- `time_series_full.png`
+- `volume_yearly_monthly_heatmap.png`, `value_yearly_monthly_heatmap.png`
+- `eda_distributions_pre-covid.png`, `eda_distributions_during-covid.png`, `eda_distributions_post-covid.png`
+- `volume_boxplot_by_period.png`, `value_boxplot_by_period.png`
+
+Additionally, normalized comparisons (z-score per period) were computed and plotted to allow direct distributional comparison on a common scale:
+- `volume_boxplot_zscore_by_period.png`
+- `value_boxplot_zscore_by_period.png`
+- `volume_kde_zscore_by_period.png`
+- `value_kde_zscore_by_period.png`
+
+---
+
+## 3. SARIMA forecasting approach
+
+- Modeling framework: SARIMA via `statsmodels.tsa.statespace.SARIMAX`.
+- The models account for monthly seasonality (s = 12) and include differencing where appropriate.
+- For Part 2 ((Pre+During) → Post), a compact grid-search over a small set of (p,d,q) and seasonal (P,D,Q) values was run and the model with lowest AIC was selected. The grid was intentionally small to keep runs fast during development; expand it if you need more exhaustive model selection.
+
+Model-selection result (Part 2):
+- Grid-search tried 96 model fits and selected: order = (1,1,1), seasonal_order = (1,1,1,12) (best AIC ≈ 545.86).
+
+Forecasting alignment and gap handling:
+- Forecasts are produced starting immediately after the last training month (no artificial gaps). Forecasts are indexed monthly (month start frequency) and plotted continuously from training into forecast horizon; residuals are computed only on overlapping months present in the test set.
+
+---
+
+## 4. Forecasting results and interpretation
+
+### Part 1 — Pre‑COVID → During‑COVID
+- Forecast plot: `visualizations/sarima_forecast_pre-covid_vs_during-covid.png`.
+- Residuals t-test (one-sample against zero):
+	- T-statistic = 5.1217
+	- P-value = 0.0000
+- Interpretation: The actual During‑COVID volumes were significantly different from what the Pre‑COVID model predicted. The large positive t-statistic indicates observed volumes were higher than pre-COVID-based forecast on average.
+
+### Part 2 — (Pre+During) → Post‑COVID
+- Forecast plot: `visualizations/sarima_forecast_(pre+during)-covid_vs_post-covid.png`.
+- Selected model: SARIMA(1,1,1)(1,1,1,12) (AIC ≈ 545.86).
+- Residuals t-test (one-sample against zero):
+	- T-statistic = -5.3953
+	- P-value = 0.0000
+- Interpretation: The Post‑COVID observed volumes were significantly lower than the forecast produced from the combined Pre+During trend (negative t-statistic). In plain terms, while volumes remain higher than pre-pandemic levels, they did not continue to grow as fast as the pandemic-era trajectory would have suggested.
+
+Caveat: residual t-tests assume residual independence. I recommend performing ACF/Ljung‑Box tests on the residuals before over-interpreting p-values; if autocorrelation exists, use robust or bootstrap inference.
+
+---
+
+## 5. Additional hypothesis tests (summary)
+
+These complement the forecasting analysis with standard comparisons across periods.
+
+- Two-sample Welch t-tests (Pre-COVID vs Post-onset [During+Post]):
+	- Volume: T-statistic = -11.0504, P-value = 0.0000
+	- Value:  T-statistic = -12.6223, P-value = 0.0000
+	- Interpretation: The means differ strongly between the early and later periods (post-onset means are substantially larger).
+
+- Chow-style structural break test (regression with dummy and time*dummy):
+	- F-statistic = 595.7437, P-value = 0.0000
+	- Interpretation: Strong evidence of a structural break at pandemic onset (change in level/trend).
+
+- Levene test on percent-change (volatility comparison):
+	- Levene statistic = 5.1980, P-value = 0.0248
+	- Interpretation: Volatility (variance of monthly growth rates) differs between pre- and post-onset periods.
+
+---
+
+## 6. Diagnostics and recommendations
+
+Observed diagnostics:
+- Statsmodels occasionally warns when the training window is short relative to the seasonal period: "Too few observations to estimate starting parameters for seasonal ARMA." This does not always invalidate the fit, but it warrants caution.
+
+Recommendations before finalizing statistical claims:
+1. Plot and test residuals (ACF/PACF, Ljung‑Box) for each fitted model. If residuals are autocorrelated, prefer bootstrap or robust inference for tests.
+2. Consider using BIC for model selection if you want stronger parsimony.
+3. Persist the best-fitted model to disk (pickle) to avoid refitting when regenerating figures.
+4. Optionally compare with alternative forecasting methods (Prophet, ETS, TBATS) for robustness.
+
+---
+
+## 7. Artifacts produced
+
+- `upi_data_cleaned.xlsx` — cleaned data workbook (3 sheets).
+- Visualizations (PNG) in `visualizations/` including:
+	- `time_series_full.png`
+	- `eda_distributions_pre-covid.png`, `eda_distributions_during-covid.png`, `eda_distributions_post-covid.png`
+	- `volume_boxplot_by_period.png`, `value_boxplot_by_period.png`
+	- `volume_boxplot_zscore_by_period.png`, `value_boxplot_zscore_by_period.png`
+	- `volume_kde_zscore_by_period.png`, `value_kde_zscore_by_period.png`
+	- `volume_yearly_monthly_heatmap.png`, `value_yearly_monthly_heatmap.png`
+	- `correlation_heatmap.png`
+	- `volume_decomposition.png`, `value_decomposition.png`
+	- `sarima_forecast_pre-covid_vs_during-covid.png`
+	- `sarima_forecast_(pre+during)-covid_vs_post-covid.png`
+
+---
+
+## 8. How to reproduce
+
+From PowerShell in the project root run:
+
+```powershell
+Set-Location -Path 'd:\Mini-Project-1'
+python .\analysis.py
+```
+
+This will regenerate the cleaned data and all visualizations. If you want to run the grid-search with a larger hyperparameter set, edit `find_best_sarima()` in `analysis.py`.
+
+---
+
+## 9. Final remarks and submission checklist
+
+- I recommend a final proofread for language and the one-paragraph executive summary used for submission.
+- Confirm that the `visualizations/` folder contains the PNGs referenced above (the script creates them when run).
+
+If you want, I can:
+- Produce a one-page PDF or PowerPoint summarizing the key figures and conclusions (ready to submit).
+- Add residual diagnostic plots and attach a short appendix discussing their outcomes.
+
+---
+
+Prepared by: analysis.py (this repository)
+
+Date run: 2025-11-04

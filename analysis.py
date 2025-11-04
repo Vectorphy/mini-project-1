@@ -7,6 +7,7 @@ from scipy.stats import ttest_1samp, ttest_ind, levene
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.formula.api import ols
 import numpy as np
+import warnings
 
 # --- 1. Data Cleaning and Preparation ---
 df = pd.read_csv('Untitled spreadsheet - Sheet1.csv')
@@ -138,24 +139,99 @@ print("--- Expanded EDA Complete ---")
 print("\n--- Generating Visualizations for Report ---")
 
 # Box plots for Volume and Value by period
-plt.figure(figsize=(10, 6))
-sns.boxplot(data=[pre_covid_df['Volume (in Bn)'], during_covid_df['Volume (in Bn)'], post_covid_df['Volume (in Bn)']],
-            showfliers=False)
-plt.xticks([0, 1, 2], ['Pre-COVID', 'During-COVID', 'Post-COVID'])
-plt.title('Volume Distribution by Period')
-plt.ylabel('Volume (in Bn)')
-plt.savefig('visualizations/volume_boxplot_by_period.png')
-plt.close()
+# Robust box plots by period using a combined DataFrame (ensures proper plotting even
+# if some periods have NaNs or different indexing)
+combined_periods = []
+for df_period, name in [(pre_covid_df, 'Pre-COVID'), (during_covid_df, 'During-COVID'), (post_covid_df, 'Post-COVID')]:
+    tmp = df_period.copy()
+    if 'Volume (in Bn)' in tmp.columns:
+        tmp = tmp[['Month', 'Volume (in Bn)', 'Value (in Trn)']].copy()
+    else:
+        # fallback in case column missing
+        tmp['Volume (in Bn)'] = tmp.get('Volume (in Mn)', np.nan) / 1000
+        tmp['Value (in Trn)'] = tmp.get('Value (in Cr.)', np.nan) / 100000
+    tmp['Period'] = name
+    combined_periods.append(tmp)
 
-plt.figure(figsize=(10, 6))
-sns.boxplot(data=[pre_covid_df['Value (in Trn)'], during_covid_df['Value (in Trn)'], post_covid_df['Value (in Trn)']],
-            showfliers=False)
-plt.xticks([0, 1, 2], ['Pre-COVID', 'During-COVID', 'Post-COVID'])
-plt.title('Value Distribution by Period')
-plt.ylabel('Value (in Trn)')
-plt.savefig('visualizations/value_boxplot_by_period.png')
-plt.close()
+combined_df = pd.concat(combined_periods, ignore_index=True)
+
+# Plot with error handling to avoid blocking the script if plotting fails
+try:
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(x='Period', y='Volume (in Bn)', data=combined_df, order=['Pre-COVID', 'During-COVID', 'Post-COVID'], showfliers=False)
+    plt.title('Volume Distribution by Period')
+    plt.ylabel('Volume (in Bn)')
+    plt.tight_layout()
+    plt.savefig('visualizations/volume_boxplot_by_period.png')
+finally:
+    plt.close()
+
+try:
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(x='Period', y='Value (in Trn)', data=combined_df, order=['Pre-COVID', 'During-COVID', 'Post-COVID'], showfliers=False)
+    plt.title('Value Distribution by Period')
+    plt.ylabel('Value (in Trn)')
+    plt.tight_layout()
+    plt.savefig('visualizations/value_boxplot_by_period.png')
+finally:
+    plt.close()
 print("- Box plots by period generated.")
+
+# --- Normalized comparison (z-score per period) ---
+try:
+    z_df = combined_df.copy()
+    # compute z-score within each period for Volume and Value
+    z_df['Volume_z'] = z_df.groupby('Period')['Volume (in Bn)'].transform(lambda x: (x - x.mean()) / x.std(ddof=0))
+    z_df['Value_z'] = z_df.groupby('Period')['Value (in Trn)'].transform(lambda x: (x - x.mean()) / x.std(ddof=0))
+
+    # Boxplots of z-scores
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(x='Period', y='Volume_z', data=z_df, order=['Pre-COVID', 'During-COVID', 'Post-COVID'], showfliers=False)
+    plt.title('Volume (z-score) Distribution by Period')
+    plt.ylabel('Volume z-score')
+    plt.tight_layout()
+    plt.savefig('visualizations/volume_boxplot_zscore_by_period.png')
+    plt.close()
+
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(x='Period', y='Value_z', data=z_df, order=['Pre-COVID', 'During-COVID', 'Post-COVID'], showfliers=False)
+    plt.title('Value (z-score) Distribution by Period')
+    plt.ylabel('Value z-score')
+    plt.tight_layout()
+    plt.savefig('visualizations/value_boxplot_zscore_by_period.png')
+    plt.close()
+
+    # KDE overlays for quick visual comparison (each period's z-scores)
+    plt.figure(figsize=(10, 6))
+    for period in ['Pre-COVID', 'During-COVID', 'Post-COVID']:
+        subset = z_df[z_df['Period'] == period]['Volume_z'].dropna()
+        if not subset.empty:
+            sns.kdeplot(subset, label=period)
+    plt.title('Volume z-score KDE by Period')
+    plt.xlabel('Volume z-score')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig('visualizations/volume_kde_zscore_by_period.png')
+    plt.close()
+
+    plt.figure(figsize=(10, 6))
+    for period in ['Pre-COVID', 'During-COVID', 'Post-COVID']:
+        subset = z_df[z_df['Period'] == period]['Value_z'].dropna()
+        if not subset.empty:
+            sns.kdeplot(subset, label=period)
+    plt.title('Value z-score KDE by Period')
+    plt.xlabel('Value z-score')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig('visualizations/value_kde_zscore_by_period.png')
+    plt.close()
+    print("- Normalized (z-score) boxplots and KDEs generated.")
+except Exception as e:
+    print(f"- Warning: normalized period plots failed: {e}")
+    try:
+        plt.close()
+    except Exception:
+        pass
 
 # Value growth rate plot
 plt.figure(figsize=(12, 6))
@@ -243,18 +319,40 @@ print("\n--- Time Series Plots Generated ---")
 # --- 5. Final SARIMA Forecasting Analysis ---
 def run_sarima_analysis(train_df, test_df, period_name, order, seasonal_order):
     print(f"\n--- Running SARIMA Analysis for {period_name} ---")
-    train_vol = train_df.set_index('Month')['Volume (in Mn)']
-    test_vol = test_df.set_index('Month')['Volume (in Mn)']
+    # Ensure the series have a monthly start frequency (MS) so forecasts align
+    train_vol = train_df.set_index('Month')['Volume (in Mn)'].sort_index()
+    test_vol = test_df.set_index('Month')['Volume (in Mn)'].sort_index()
+
+    # Force a monthly start frequency. Do NOT fill missing test values here — we only want
+    # the forecast horizon to match the number of test periods.
+    try:
+        train_vol = train_vol.asfreq('MS')
+    except Exception:
+        # If the index has duplicate or invalid entries, build an explicit monthly index
+        train_vol = train_vol.reindex(pd.date_range(start=train_vol.index.min(), end=train_vol.index.max(), freq='MS'))
+
+    # Determine forecast horizon so forecasts start immediately after the last training month
+    # and extend up to the end of the test period (no gaps between training and forecast).
+    # Forecast start is the month after the last training observation.
+    forecast_start = train_vol.index.max() + pd.DateOffset(months=1)
+    forecast_end = test_vol.index.max()
+    if forecast_end < forecast_start:
+        # Test period is entirely at or before the end of training; nothing to forecast
+        print("\n- Test period ends on or before the training end; no forecast horizon to compute.")
+        return
+
+    forecast_index = pd.date_range(start=forecast_start, end=forecast_end, freq='MS')
+    steps = len(forecast_index)
 
     model = SARIMAX(train_vol, order=order, seasonal_order=seasonal_order, enforce_stationarity=False, enforce_invertibility=False)
     fitted_model = model.fit(disp=False)
 
-    # Use get_prediction for more robust forecasting across gaps.
-    forecast = fitted_model.get_prediction(start=test_vol.index[0], end=test_vol.index[-1])
-
-    # The results are already aligned with the test data index.
-    forecast_mean = forecast.predicted_mean
-    forecast_ci = forecast.conf_int()
+    # Use get_forecast to produce 'steps' ahead forecasts starting immediately after training end
+    forecast_res = fitted_model.get_forecast(steps=steps)
+    forecast_mean = pd.Series(forecast_res.predicted_mean, index=forecast_index)
+    forecast_ci = forecast_res.conf_int()
+    # conf_int comes back with integer index; set it to the forecast_index as well
+    forecast_ci.index = forecast_index
 
     plt.figure(figsize=(10, 6))
     plt.plot(train_vol.index, train_vol, label='Training Data')
@@ -271,24 +369,115 @@ def run_sarima_analysis(train_df, test_df, period_name, order, seasonal_order):
     plt.savefig(f'visualizations/sarima_forecast_{period_name.lower().replace(" ", "_")}.png')
     plt.close()
 
-    residuals = test_vol - forecast_mean
+    # Align forecast and test series for residual calculation (keep only months present in test)
+    forecast_mean_aligned = forecast_mean.reindex(test_vol.index)
+    forecast_ci_aligned = forecast_ci.reindex(test_vol.index)
+
+    residuals = test_vol - forecast_mean_aligned
 
     # Check for NaN in residuals before t-test
-    if not residuals.isnull().all():
+    if not residuals.dropna().empty:
         t_stat, p_val = ttest_1samp(residuals.dropna(), 0)
         print(f"\n- Test on Residuals: T-statistic={t_stat:.4f}, P-value={p_val:.4f}")
     else:
-        print("\n- Residuals calculation resulted in NaN. Check data alignment.")
+        print("\n- Residuals calculation resulted in NaN (no overlapping months between forecast and test). Check data alignment and date ranges.")
+
+
+def find_best_sarima(train_df, p_vals=[0,1,2], d_vals=[0,1], q_vals=[0,1],
+                     P_vals=[0,1], D_vals=[0,1], Q_vals=[0,1], s=12, maxiter=50):
+    """
+    Small grid search over SARIMA hyperparameters using AIC as selection metric.
+    Keeps the search short by default; returns (order, seasonal_order).
+    """
+    print("\n--- Running small SARIMA grid search (AIC) ---")
+    # Prepare series: ensure monthly frequency
+    series = train_df.set_index('Month')['Volume (in Mn)'].sort_index()
+    try:
+        series = series.asfreq('MS')
+    except Exception:
+        series = series.reindex(pd.date_range(start=series.index.min(), end=series.index.max(), freq='MS'))
+
+    best_aic = np.inf
+    best_cfg = None
+    tried = 0
+    warnings.filterwarnings('ignore')
+    for p in p_vals:
+        for d in d_vals:
+            for q in q_vals:
+                for P in P_vals:
+                    for D in D_vals:
+                        for Q in Q_vals:
+                            order = (p, d, q)
+                            seasonal_order = (P, D, Q, s)
+                            try:
+                                model = SARIMAX(series, order=order, seasonal_order=seasonal_order,
+                                                enforce_stationarity=False, enforce_invertibility=False)
+                                res = model.fit(disp=False, maxiter=maxiter)
+                                aic = res.aic
+                                tried += 1
+                                print(f"Tried order={order} seasonal={seasonal_order} -> AIC={aic:.1f}")
+                                if aic < best_aic:
+                                    best_aic = aic
+                                    best_cfg = (order, seasonal_order)
+                            except Exception as e:
+                                # skip bad configurations quickly
+                                print(f"Skipped order={order} seasonal={seasonal_order} due to: {e}")
+                                continue
+    warnings.filterwarnings('default')
+    if best_cfg is not None:
+        print(f"--- Grid search complete: tried {tried} fits, best AIC={best_aic:.2f} with order={best_cfg[0]} seasonal={best_cfg[1]} ---")
+        return best_cfg
+    else:
+        print("--- Grid search failed to find a valid model; falling back to (1,1,1)x(1,1,1,12) ---")
+        return (1,1,1), (1,1,1,12)
 
 # Part 1
 run_sarima_analysis(pre_covid_df, during_covid_df, "Pre-COVID vs During-COVID", order=(1, 1, 1), seasonal_order=(1, 1, 1, 12))
 
 # Part 2
 pre_and_during_df = pd.concat([pre_covid_df, during_covid_df])
+# Ensure we have a continuous monthly index for the pre+during training set and interpolate missing values conservatively
 full_range = pd.date_range(start=pre_and_during_df['Month'].min(), end=pre_and_during_df['Month'].max(), freq='MS')
 pre_and_during_df = pre_and_during_df.set_index('Month').reindex(full_range).reset_index().rename(columns={'index': 'Month'})
 pre_and_during_df['Volume (in Mn)'] = pre_and_during_df['Volume (in Mn)'].interpolate(method='linear')
-run_sarima_analysis(pre_and_during_df, post_covid_df, "(Pre+During)-COVID vs Post-COVID", order=(1, 1, 1), seasonal_order=(1, 1, 1, 12))
+
+# For Part 2: explicitly use training up to the end of the during-COVID period and forecast from the start of post-COVID
+train_df_part2 = pre_and_during_df[pre_and_during_df['Month'] <= during_covid_end].copy()
+test_df_part2 = post_covid_df.copy()
+
+# Run a larger grid-search on the training portion to pick (order, seasonal_order)
+# This grid is bigger than the development run and will take longer to complete.
+print("\n--- Starting extended SARIMA grid-search for Part 2 (this may take a while) ---")
+best_order, best_seasonal = find_best_sarima(
+    train_df_part2,
+    p_vals=[0, 1, 2, 3],
+    d_vals=[0, 1],
+    q_vals=[0, 1, 2, 3],
+    P_vals=[0, 1, 2],
+    D_vals=[0, 1],
+    Q_vals=[0, 1, 2],
+    s=12,
+    maxiter=100,
+)
+print(f"Using best order={best_order} and seasonal_order={best_seasonal} for Part 2")
+
+# Fit the selected model on the training series and save the fitted model to disk for reuse
+try:
+    train_series_part2 = train_df_part2.set_index('Month')['Volume (in Mn)'].sort_index().asfreq('MS')
+except Exception:
+    train_series_part2 = train_df_part2.set_index('Month')['Volume (in Mn)'].sort_index()
+    train_series_part2 = train_series_part2.reindex(pd.date_range(start=train_series_part2.index.min(), end=train_series_part2.index.max(), freq='MS'))
+
+full_model = SARIMAX(train_series_part2, order=best_order, seasonal_order=best_seasonal, enforce_stationarity=False, enforce_invertibility=False)
+fitted_full_model = full_model.fit(disp=False)
+
+import pickle
+model_path = os.path.join('visualizations', 'best_sarima_part2.pkl')
+with open(model_path, 'wb') as fh:
+    pickle.dump(fitted_full_model, fh)
+print(f"Best SARIMA model for Part 2 fitted and saved to: {model_path}")
+
+run_sarima_analysis(train_df_part2, test_df_part2, "(Pre+During)-COVID vs Post-COVID", order=best_order, seasonal_order=best_seasonal)
 print("\n--- SARIMA Forecasting Analysis Complete ---")
 
 # --- 6. Additional Hypothesis Tests ---
