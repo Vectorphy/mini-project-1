@@ -184,7 +184,7 @@ try:
     z_df['Volume_z'] = z_df.groupby('Period')['Volume (in Bn)'].transform(lambda x: (x - x.mean()) / x.std(ddof=0))
     z_df['Value_z'] = z_df.groupby('Period')['Value (in Trn)'].transform(lambda x: (x - x.mean()) / x.std(ddof=0))
 
-    # Boxplots of z-scores
+    docs: add placeholder comment for z-score boxplots in normalized comparison section
     plt.figure(figsize=(10, 6))
     sns.boxplot(x='Period', y='Volume_z', data=z_df, order=['Pre-COVID', 'During-COVID', 'Post-COVID'], showfliers=False)
     plt.title('Volume (z-score) Distribution by Period')
